@@ -1,4 +1,4 @@
-// src/lib/auth/config.ts
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { createClient } from "@/lib/supabase/client";
@@ -20,19 +20,33 @@ export const authOptions: NextAuthOptions = {
           password: credentials.password,
         });
 
-        if (error || !data.user) return null;
+        if (error || !data.user) {
+          console.error("Auth error:", error);
+          return null;
+        }
 
         // Fetch profile
-        const { data: profile } = await supabase
+        const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('first_name, last_name, role')
           .eq('id', data.user.id)
           .single();
 
+        if (profileError) {
+          console.error("Profile fetch error:", profileError);
+        }
+
         const userEmail = data.user.email || `${data.user.id}@vincollins.edu.ng`;
-        const displayName = profile 
-          ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || userEmail.split('@')[0]
-          : userEmail.split('@')[0] || 'User';
+        
+        let displayName = userEmail.split('@')[0] || 'User';
+        if (profile) {
+          const firstName = profile.first_name || '';
+          const lastName = profile.last_name || '';
+          const fullName = `${firstName} ${lastName}`.trim();
+          if (fullName) {
+            displayName = fullName;
+          }
+        }
 
         return {
           id: data.user.id,
@@ -68,11 +82,18 @@ export const authOptions: NextAuthOptions = {
       }
       return session;
     },
+    async redirect({ url, baseUrl }) {
+      // Don't redirect - just return the URL as is
+      return url;
+    },
   },
   pages: {
-    signIn: '/login',
-    error: '/login',
+    signIn: '/login', // This is just for reference, no forced redirects
   },
-  session: { strategy: 'jwt' },
+  session: { 
+    strategy: 'jwt',
+    maxAge: 30 * 24 * 60 * 60,
+  },
   secret: process.env.NEXTAUTH_SECRET,
+  debug: false,
 };

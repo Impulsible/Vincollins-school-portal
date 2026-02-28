@@ -1,28 +1,36 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
+import * as z from 'zod'
+import { signIn } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Eye, EyeOff, Loader2 } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
-import { loginSchema } from '@/lib/validations/auth'
+import { Loader2 } from 'lucide-react'
+import Link from 'next/link'
+import { getCallbackUrl } from '@/lib/utils/url'
+
+const loginSchema = z.object({
+  email: z.string().email('Please enter a valid email address'),
+  password: z.string().min(1, 'Password is required'),
+})
 
 type LoginFormData = z.infer<typeof loginSchema>
 
 export function LoginForm() {
   const router = useRouter()
-  const [showPassword, setShowPassword] = useState(false)
+  const searchParams = useSearchParams()
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  
+
+  // Get the callback URL from query params and decode it properly
+  const callbackUrl = getCallbackUrl(searchParams)
+
   const {
     register,
     handleSubmit,
@@ -36,20 +44,22 @@ export function LoginForm() {
     setError(null)
 
     try {
-      const supabase = createClient()
-      const { error: authError } = await supabase.auth.signInWithPassword({
+      const result = await signIn('credentials', {
         email: data.email,
         password: data.password,
+        redirect: false,
+        callbackUrl, // Use the properly decoded callbackUrl
       })
 
-      if (authError) {
-        throw authError
+      if (result?.error) {
+        setError('Invalid email or password')
+      } else {
+        // Use the callbackUrl for redirect
+        router.push(callbackUrl)
+        router.refresh()
       }
-
-      router.push('/dashboard')
-      router.refresh()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to login')
+    } catch (error) {
+      setError('An error occurred. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -57,12 +67,10 @@ export function LoginForm() {
 
   return (
     <Card className="w-full max-w-md mx-auto">
-      <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl font-serif text-center">
-          Welcome Back
-        </CardTitle>
+      <CardHeader>
+        <CardTitle className="text-2xl text-center font-serif">Welcome Back</CardTitle>
         <CardDescription className="text-center">
-          Enter your credentials to access the portal
+          Enter your credentials to access your account
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -80,77 +88,54 @@ export function LoginForm() {
               type="email"
               placeholder="you@example.com"
               {...register('email')}
-              aria-invalid={!!errors.email}
+              disabled={isLoading}
             />
             {errors.email && (
-              <p className="text-sm text-portal-red">{errors.email.message}</p>
+              <p className="text-sm text-destructive">{errors.email.message}</p>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                placeholder="••••••••"
-                {...register('password')}
-                aria-invalid={!!errors.password}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="absolute right-0 top-0 h-full px-3"
-                onClick={() => setShowPassword(!showPassword)}
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password">Password</Label>
+              <Link
+                href="/forgot-password"
+                className="text-sm text-primary hover:underline"
               >
-                {showPassword ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
-                <span className="sr-only">
-                  {showPassword ? 'Hide password' : 'Show password'}
-                </span>
-              </Button>
+                Forgot password?
+              </Link>
             </div>
+            <Input
+              id="password"
+              type="password"
+              placeholder="••••••••"
+              {...register('password')}
+              disabled={isLoading}
+            />
             {errors.password && (
-              <p className="text-sm text-portal-red">{errors.password.message}</p>
+              <p className="text-sm text-destructive">{errors.password.message}</p>
             )}
           </div>
 
-          <div className="flex items-center justify-end">
-            <Link
-              href="/forgot-password"
-              className="text-sm text-portal-blue hover:underline"
-            >
-              Forgot password?
-            </Link>
-          </div>
-
           <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Sign In
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Please wait
+              </>
+            ) : (
+              'Sign In'
+            )}
           </Button>
         </form>
       </CardContent>
-      <CardFooter className="flex flex-col space-y-4">
-        <div className="text-sm text-muted-foreground text-center">
-          Don't have an account?{' '}
-          <Link href="/contact" className="text-portal-blue hover:underline">
-            Contact Administration
+      <CardFooter className="flex justify-center">
+        <p className="text-sm text-muted-foreground">
+          Don&apos;t have an account?{' '}
+          <Link href="/contact" className="text-primary hover:underline">
+            Contact Admin
           </Link>
-        </div>
-        <div className="text-xs text-muted-foreground text-center">
-          By signing in, you agree to our{' '}
-          <Link href="/terms" className="hover:underline">
-            Terms of Service
-          </Link>{' '}
-          and{' '}
-          <Link href="/privacy" className="hover:underline">
-            Privacy Policy
-          </Link>
-        </div>
+        </p>
       </CardFooter>
     </Card>
   )

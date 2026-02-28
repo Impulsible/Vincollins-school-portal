@@ -1,33 +1,21 @@
-// src/middleware.ts
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
 
+// This middleware doesn't protect any routes - it just passes through
 export default withAuth(
-  function middleware() {
+  function middleware(req) {
     return NextResponse.next();
   },
   {
     callbacks: {
-      authorized: ({ token, req }) => {
-        // Allow auth API routes to pass through
-        if (req.nextUrl.pathname.startsWith('/api/auth')) {
-          return true;
-        }
-        return !!token;
+      authorized: () => {
+        // Allow all requests, regardless of authentication
+        return true;
       },
     },
   }
 );
 
 export const config = {
-  matcher: [
-    /*
-     * Match all request paths except:
-     * - api/auth (authentication routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization)
-     * - favicon.ico, sitemap.xml, robots.txt
-     */
-    '/((?!api/auth|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)',
-  ],
+  matcher: [], // Empty matcher means no routes are protected
 };

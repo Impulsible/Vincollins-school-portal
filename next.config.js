@@ -26,8 +26,22 @@ const nextConfig = {
   experimental: {
     optimizeCss: true,
   },
-  // CRITICAL: Remove 'output: standalone' if present
-  // This is the main cause of the manifest error on Vercel
+  async redirects() {
+    return [
+      {
+        source: '/login/:path*',
+        has: [
+          {
+            type: 'query',
+            key: 'callbackUrl',
+            value: '(?<url>.*)',
+          },
+        ],
+        destination: '/login?callbackUrl=:url',
+        permanent: false,
+      },
+    ];
+  },
 }
 
 export default nextConfig
