@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
@@ -56,10 +55,9 @@ export async function middleware(request: NextRequest) {
   )
 
   const { data: { session } } = await supabase.auth.getSession()
-
   const path = request.nextUrl.pathname
 
-  // Define public paths
+  // Public paths that don't require authentication
   const isPublicPath = path === '/' || 
                        path === '/login' || 
                        path === '/forgot-password' || 
@@ -68,22 +66,36 @@ export async function middleware(request: NextRequest) {
                        path.startsWith('/api') ||
                        path.includes('.')
 
-  // Protected routes
-  const isProtectedRoute = path.startsWith('/dashboard') ||
-                          path.startsWith('/student') ||
-                          path.startsWith('/staff') ||
-                          path.startsWith('/admin')
-
-  if (!session && isProtectedRoute) {
+  // Redirect logic
+  if (!session && !isPublicPath) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  if (session && (path === '/login' || path === '/forgot-password' || path === '/reset-password')) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+  if (session && path === '/') {
+    // Get user role and redirect accordingly
+    const { data: user } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', session.user.id)
+      .single()
+
+    if (user?.role === 'student') {
+      return NextResponse.redirect(new URL('/student', request.url))
+    }
+    if (user?.role === 'staff') {
+      return NextResponse.redirect(new URL('/staff', request.url))
+    }
+    if (user?.role === 'admin') {
+      return NextResponse.redirect(new URL('/admin', request.url))
+    }
   }
 
-  // Role-based access
-  if (session && isProtectedRoute) {
+  if (session && (path === '/login' || path === '/forgot-password' || path === '/reset-password')) {
+    return NextResponse.redirect(new URL('/', request.url))
+  }
+
+  // Role-based access control
+  if (session) {
     const { data: user } = await supabase
       .from('users')
       .select('role')
@@ -91,13 +103,13 @@ export async function middleware(request: NextRequest) {
       .single()
 
     if (path.startsWith('/student') && user?.role !== 'student') {
-      return NextResponse.redirect(new URL('/dashboard', request.url))
+      return NextResponse.redirect(new URL('/', request.url))
     }
     if (path.startsWith('/staff') && user?.role !== 'staff') {
-      return NextResponse.redirect(new URL('/dashboard', request.url))
+      return NextResponse.redirect(new URL('/', request.url))
     }
     if (path.startsWith('/admin') && user?.role !== 'admin') {
-      return NextResponse.redirect(new URL('/dashboard', request.url))
+      return NextResponse.redirect(new URL('/', request.url))
     }
   }
 
