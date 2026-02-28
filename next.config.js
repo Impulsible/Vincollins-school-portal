@@ -16,13 +16,17 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'images.unsplash.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'fonts.gstatic.com',
+      },
     ],
     formats: ['image/avif', 'image/webp'],
   },
   experimental: {
     optimizeCss: true,
   },
-  output: 'standalone', // Add this for better Vercel compatibility
+  // Remove this line: output: 'standalone',
 }
 
 export default nextConfig
