@@ -47,7 +47,7 @@ import {
   ChevronRight,
 } from 'lucide-react'
 
-// Define the type for navigation items
+// Define proper types
 interface NavChildItem {
   title: string
   href: string
@@ -63,10 +63,12 @@ interface NavItem {
 
 interface DashboardSidebarProps {
   user: {
+    id?: string
     first_name?: string
     last_name?: string
+    email?: string
     role?: 'student' | 'staff' | 'admin' | string
-    [key: string]: any
+    [key: string]: any // Allow for additional properties
   }
 }
 
@@ -75,11 +77,16 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
   const router = useRouter()
 
   const handleLogout = async () => {
-    // Implement logout logic here
-    // const supabase = createClient()
-    // await supabase.auth.signOut()
-    router.push('/')
-    router.refresh()
+    try {
+      const { createClient } = await import('@/lib/supabase/client')
+      const supabase = createClient()
+      await supabase.auth.signOut()
+      router.push('/')
+      router.refresh()
+    } catch (error) {
+      console.error('Logout error:', error)
+      router.push('/')
+    }
   }
 
   const getNavigationItems = (): NavItem[] => {
@@ -382,7 +389,7 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
                 
                 {item.children && (
                   <div className="ml-6 space-y-1">
-                    {item.children.map((child: NavChildItem) => (
+                    {item.children.map((child) => (
                       <Link
                         key={child.href}
                         href={child.href}

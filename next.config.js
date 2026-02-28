@@ -1,47 +1,16 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  eslint: {
-    ignoreDuringBuilds: true,
+  output: 'standalone',
+  images: {
+    domains: ['fywuczzxyckalkwjmqws.supabase.co'],
   },
+  // Temporarily disable type checking for build
   typescript: {
     ignoreBuildErrors: true,
   },
-  images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: '**.supabase.co',
-      },
-      {
-        protocol: 'https',
-        hostname: 'images.unsplash.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'fonts.gstatic.com',
-      },
-    ],
-    formats: ['image/avif', 'image/webp'],
-  },
-  experimental: {
-    optimizeCss: true,
-  },
-  async redirects() {
-    return [
-      {
-        source: '/login/:path*',
-        has: [
-          {
-            type: 'query',
-            key: 'callbackUrl',
-            value: '(?<url>.*)',
-          },
-        ],
-        destination: '/login?callbackUrl=:url',
-        permanent: false,
-      },
-    ];
+  eslint: {
+    ignoreDuringBuilds: true,
   },
 }
 
-export default nextConfig
+module.exports = nextConfig

@@ -1,39 +1,36 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable react-hooks/set-state-in-effect */
-// src/hooks/use-auth.ts
-import { useEffect, useState } from 'react'
-import { useSession } from 'next-auth/react'
+'use client'
 
-export interface User {
-  id: string
-  name?: string | null
-  email?: string | null
-  image?: string | null
-  role?: string
-  firstName?: string
-  lastName?: string
-}
+import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 
 export function useAuth() {
-  const { data: session, status } = useSession()
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [user, setUser] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [user, setUser] = useState<User | undefined>()
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
 
   useEffect(() => {
-    if (status === 'loading') {
-      setIsLoading(true)
-    } else {
+    const supabase = createClient()
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null)
       setIsAuthenticated(!!session)
-      setUser(session?.user as User)
       setIsLoading(false)
-    }
-  }, [session, status])
+    })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+      setIsAuthenticated(!!session)
+      setIsLoading(false)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
 
   return {
     user,
     isAuthenticated,
     isLoading,
-    role: (session?.user as any)?.role,
+    role: (user as any)?.role,
   }
 }
