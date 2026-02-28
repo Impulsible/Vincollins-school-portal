@@ -1,0 +1,7 @@
+# Vercel ignore file
+.next
+node_modules
+README.md
+.git
+*.log
+.DS_Store

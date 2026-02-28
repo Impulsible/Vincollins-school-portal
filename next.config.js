@@ -11,8 +11,10 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: '**.supabase.co',
-        port: '',
-        pathname: '/storage/v1/object/public/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
       },
     ],
     formats: ['image/avif', 'image/webp'],
@@ -20,11 +22,7 @@ const nextConfig = {
   experimental: {
     optimizeCss: true,
   },
-  compiler: {
-    removeConsole: process.env.NODE_ENV === 'production',
-  },
-  poweredByHeader: false,
-  reactStrictMode: true,
+  output: 'standalone', // Add this for better Vercel compatibility
 }
 
 export default nextConfig
